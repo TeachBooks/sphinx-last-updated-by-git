@@ -12,6 +12,9 @@ If a page doesn't have a source file, its last_updated_ time is set to ``None``.
 The default value for html_last_updated_fmt_ is changed
 from ``None`` to the empty string.
 
+If html_last_updated_fmt_ is set to the empty string,
+the date is displayed in a localized format based on the value of language_.
+
 Usage
     #. Make sure that you use a Sphinx theme that shows the "last updated"
        information (or use a custom template with last_updated_)
