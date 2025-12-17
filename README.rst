@@ -54,6 +54,15 @@ Options
       calculation by passing a list of commit hashes to the configuration
       option ``git_exclude_commits``.
 
+    * By default, only the first-parent history is followed when determining
+      the last updated date (using ``git log --first-parent``).
+      This means that merges from the current branch into other branches
+      are ignored, and only changes merged into the current branch are
+      considered.  This is typically the desired behavior for documentation
+      builds, as it reflects when content actually entered the branch being
+      built.  If you want to follow the full history including all merge
+      parents, set ``git_first_parent = False`` in your ``conf.py``.
+
 Caveats
     * When using a "Git shallow clone" (with the ``--depth`` option),
       the "last updated" commit for a long-unchanged file
