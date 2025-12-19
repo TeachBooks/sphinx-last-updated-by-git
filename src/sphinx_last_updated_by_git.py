@@ -22,7 +22,7 @@ __version__ = '0.3.8'
 logger = getLogger(__name__)
 
 
-def update_file_dates(git_dir, exclude_commits, file_dates):
+def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
     """Ask Git for "author date" of given files in given directory.
 
     A git subprocess is executed at most three times:
@@ -52,12 +52,17 @@ def update_file_dates(git_dir, exclude_commits, file_dates):
     requested_files.intersection_update(existing_files)
     assert requested_files
 
+    git_log_args = [
+        'git', 'log', '--pretty=format:%n%at%x00%H%x00%P',
+        '--author-date-order', '--relative', '--name-only',
+        '--no-show-signature', '-z', '-m'
+    ]
+    if first_parent:
+        git_log_args.append('--first-parent')
+    git_log_args.extend(['--', *requested_files])
+
     process = subprocess.Popen(
-        [
-            'git', 'log', '--pretty=format:%n%at%x00%H%x00%P',
-            '--author-date-order', '--relative', '--name-only',
-            '--no-show-signature', '-z', '-m', '--', *requested_files
-        ],
+        git_log_args,
         cwd=git_dir,
         stdout=subprocess.PIPE,
         # NB: We ignore stderr to avoid deadlocks when reading stdout
@@ -153,7 +158,9 @@ def _env_updated(app, env):
         'fuchsia', len(src_dates), app.verbosity, stringify_func=to_relpath)
     for git_dir in srcdir_iter:
         try:
-            update_file_dates(git_dir, exclude_commits, src_dates[git_dir])
+            update_file_dates(
+                git_dir, exclude_commits, src_dates[git_dir],
+                first_parent=app.config.git_first_parent)
         except subprocess.CalledProcessError as e:
             msg = 'Error getting data from Git'
             msg += ' (no "last updated" dates will be shown'
@@ -206,7 +213,9 @@ def _env_updated(app, env):
         'turquoise', len(dep_dates), app.verbosity, stringify_func=to_relpath)
     for git_dir in depdir_iter:
         try:
-            update_file_dates(git_dir, exclude_commits, dep_dates[git_dir])
+            update_file_dates(
+                git_dir, exclude_commits, dep_dates[git_dir],
+                first_parent=app.config.git_first_parent)
         except subprocess.CalledProcessError as e:
             pass  # We ignore errors in dependencies
 
@@ -332,6 +341,8 @@ def setup(app):
     app.add_config_value('git_exclude_patterns', [], rebuild='env')
     app.add_config_value(
         'git_exclude_commits', [], rebuild='env')
+    app.add_config_value(
+        'git_first_parent', True, rebuild='env')
     return {
         'version': __version__,
         'parallel_read_safe': True,
