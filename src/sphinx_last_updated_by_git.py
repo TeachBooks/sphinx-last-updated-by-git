@@ -158,8 +158,9 @@ def _env_updated(app, env):
         'fuchsia', len(src_dates), app.verbosity, stringify_func=to_relpath)
     for git_dir in srcdir_iter:
         try:
-            update_file_dates(git_dir, exclude_commits, src_dates[git_dir],
-                            first_parent=app.config.git_first_parent)
+            update_file_dates(
+                git_dir, exclude_commits, src_dates[git_dir],
+                first_parent=app.config.git_first_parent)
         except subprocess.CalledProcessError as e:
             msg = 'Error getting data from Git'
             msg += ' (no "last updated" dates will be shown'
@@ -212,8 +213,9 @@ def _env_updated(app, env):
         'turquoise', len(dep_dates), app.verbosity, stringify_func=to_relpath)
     for git_dir in depdir_iter:
         try:
-            update_file_dates(git_dir, exclude_commits, dep_dates[git_dir],
-                            first_parent=app.config.git_first_parent)
+            update_file_dates(
+                git_dir, exclude_commits, dep_dates[git_dir],
+                first_parent=app.config.git_first_parent)
         except subprocess.CalledProcessError as e:
             pass  # We ignore errors in dependencies
 
