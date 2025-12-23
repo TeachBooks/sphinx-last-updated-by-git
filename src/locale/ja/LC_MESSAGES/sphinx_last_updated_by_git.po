@@ -11,7 +11,3 @@ msgstr ""
 #: src/sphinx_last_updated_by_git.py
 msgid "by %(author)s"
 msgstr "%(author)s によって"
-
-#: src/sphinx_last_updated_by_git.py
-msgid "Last updated on %(date)s by %(author)s"
-msgstr "最終更新日 %(date)s、%(author)s によって"
