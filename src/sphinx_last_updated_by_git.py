@@ -268,13 +268,18 @@ def _html_page_context(app, pagename, templatename, context, doctree):
 
     utc_date = datetime.fromtimestamp(int(timestamp), timezone.utc)
     date = utc_date.astimezone(app.config.git_last_updated_timezone)
-    last_updated_text = format_date(
+    date_str = format_date(
         lufmt or _('%b %d, %Y'),
         date=date,
         language=app.config.language)
+    
     if author and app.config.git_show_author:
-        last_updated_text += ' ' + _('by') + ' ' + author
-    context['last_updated'] = last_updated_text
+        context['last_updated'] = _('%(date)s by %(author)s') % {
+            'date': date_str,
+            'author': author
+        }
+    else:
+        context['last_updated'] = date_str
 
     if app.config.git_last_updated_metatags:
         context['metatags'] += """
