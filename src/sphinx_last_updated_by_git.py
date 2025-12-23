@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
 
-from sphinx.locale import _
+from sphinx.locale import _, get_translation
 from sphinx.util.i18n import format_date
 from sphinx.util.logging import getLogger
 from sphinx.util.matching import Matcher
@@ -20,6 +20,9 @@ __version__ = '0.3.8'
 
 
 logger = getLogger(__name__)
+
+# Translation function for this extension's own messages
+_ext = get_translation('sphinx_last_updated_by_git').gettext
 
 
 def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
@@ -272,14 +275,22 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         lufmt or _('%b %d, %Y'),
         date=date,
         language=app.config.language)
-    
+
+    context['last_updated'] = date_str
+
     if author and app.config.git_show_author:
-        context['last_updated'] = _('%(date)s by %(author)s') % {
+        context['last_updated_author'] = author
+        # Localized convenience strings (if the project's locale has catalogs)
+        context['last_updated_by'] = _ext('by %(author)s') % {'author': author}
+        context['last_updated_full'] = _ext('Last updated on %(date)s by %(author)s') % {
             'date': date_str,
-            'author': author
+            'author': author,
         }
     else:
-        context['last_updated'] = date_str
+        # Ensure keys aren't leaked from other pages
+        for key in ('last_updated_author', 'last_updated_by', 'last_updated_full'):
+            if key in context:
+                del context[key]
 
     if app.config.git_last_updated_metatags:
         context['metatags'] += """
@@ -347,6 +358,13 @@ def setup(app):
         'git_last_updated_metatags', True, rebuild='html')
     app.add_config_value(
         'git_show_author', False, rebuild='html')
+    # Register this extension's message catalog for i18n of convenience strings
+    try:
+        locale_dir = str((Path(__file__).parent / 'locale').resolve())
+        app.add_message_catalog('sphinx_last_updated_by_git', locale_dir)
+    except Exception:
+        # If unavailable at build time, fail gracefully; strings will fall back to English
+        pass
     app.add_config_value('git_exclude_patterns', [], rebuild='env')
     app.add_config_value(
         'git_exclude_commits', [], rebuild='env')
