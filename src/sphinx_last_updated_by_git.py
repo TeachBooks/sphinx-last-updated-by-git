@@ -22,7 +22,7 @@ __version__ = '0.3.8'
 logger = getLogger(__name__)
 
 
-def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
+def update_file_dates(git_dir, exclude_commits, file_dates, first_parent, show_merge_commits):
     """Ask Git for "author date" of given files in given directory.
 
     A git subprocess is executed at most three times:
@@ -55,8 +55,10 @@ def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
     git_log_args = [
         'git', 'log', '--pretty=format:%n%at%x00%H%x00%P',
         '--author-date-order', '--relative', '--name-only',
-        '--no-show-signature', '-z', '-m'
+        '--no-show-signature', '-z'
     ]
+    if show_merge_commits:
+        git_log_args.append('-m')
     if first_parent:
         git_log_args.append('--first-parent')
     git_log_args.extend(['--', *requested_files])
@@ -160,7 +162,8 @@ def _env_updated(app, env):
         try:
             update_file_dates(
                 git_dir, exclude_commits, src_dates[git_dir],
-                first_parent=app.config.git_first_parent)
+                first_parent=app.config.git_first_parent,
+                show_merge_commits=app.config.git_show_merge_commits)
         except subprocess.CalledProcessError as e:
             msg = 'Error getting data from Git'
             msg += ' (no "last updated" dates will be shown'
@@ -215,7 +218,8 @@ def _env_updated(app, env):
         try:
             update_file_dates(
                 git_dir, exclude_commits, dep_dates[git_dir],
-                first_parent=app.config.git_first_parent)
+                first_parent=app.config.git_first_parent,
+                show_merge_commits=app.config.git_show_merge_commits)
         except subprocess.CalledProcessError as e:
             pass  # We ignore errors in dependencies
 
@@ -339,7 +343,9 @@ def setup(app):
     app.add_config_value(
         'git_exclude_commits', [], rebuild='env')
     app.add_config_value(
-        'git_first_parent', True, rebuild='env')
+        'git_first_parent', False, rebuild='env')
+    app.add_config_value(
+        'git_show_merge_commits', False, rebuild='env')
     return {
         'version': __version__,
         'parallel_read_safe': True,

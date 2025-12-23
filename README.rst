@@ -51,14 +51,19 @@ Options
       calculation by passing a list of commit hashes to the configuration
       option ``git_exclude_commits``.
 
-    * By default, only the first-parent history is followed when determining
-      the last updated date (using ``git log --first-parent``).
-      This means that merges from the current branch into other branches
-      are ignored, and only changes merged into the current branch are
-      considered.  This is typically the desired behavior for documentation
-      builds, as it reflects when content actually entered the branch being
-      built.  If you want to follow the full history including all merge
-      parents, set ``git_first_parent = False`` in your ``conf.py``.
+    * By default, the full Git history is followed when determining
+      the last updated date, including all merge parents.
+      This means the timestamp reflects when the file content was actually
+      changed.
+      If you want to follow only the first-parent history (mainline),
+      set ``git_first_parent = True`` in your ``conf.py``.
+
+    * By default, merge commits are not shown as separate entries
+      when determining the last updated date.
+      This ensures that the timestamp reflects when the file content was
+      actually changed, not when a merge occurred.
+      If you want merge commits to be included as separate entries with their
+      own timestamps, set ``git_show_merge_commits = True`` in your ``conf.py``.
 
 Caveats
     * When using a "Git shallow clone" (with the ``--depth`` option),
