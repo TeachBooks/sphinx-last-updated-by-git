@@ -21,8 +21,9 @@ __version__ = '0.3.8'
 
 logger = getLogger(__name__)
 
-# Translation function for this extension's own messages
-_ext = get_translation('sphinx_last_updated_by_git').gettext
+# Translation function for this extension's own messages (domain-aware)
+MESSAGE_CATALOG_NAME = 'sphinx_last_updated_by_git'
+translate = get_translation(MESSAGE_CATALOG_NAME)
 
 
 def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
@@ -281,8 +282,8 @@ def _html_page_context(app, pagename, templatename, context, doctree):
     if author and app.config.git_show_author:
         context['last_updated_author'] = author
         # Localized convenience strings (if the project's locale has catalogs)
-        context['last_updated_by'] = _ext('by %(author)s') % {'author': author}
-        context['last_updated_full'] = _ext('Last updated on %(date)s by %(author)s') % {
+        context['last_updated_by'] = translate('by %(author)s') % {'author': author}
+        context['last_updated_full'] = translate('Last updated on %(date)s by %(author)s') % {
             'date': date_str,
             'author': author,
         }
@@ -361,7 +362,7 @@ def setup(app):
     # Register this extension's message catalog for i18n of convenience strings
     try:
         locale_dir = str((Path(__file__).parent / 'locale').resolve())
-        app.add_message_catalog('sphinx_last_updated_by_git', locale_dir)
+        app.add_message_catalog(MESSAGE_CATALOG_NAME, locale_dir)
     except Exception:
         # If unavailable at build time, fail gracefully; strings will fall back to English
         pass
