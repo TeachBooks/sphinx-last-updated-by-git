@@ -277,21 +277,12 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         date=date,
         language=app.config.language)
 
-    context['last_updated'] = date_str
-
     if author and app.config.git_show_author:
-        context['last_updated_author'] = author
-        # Localized convenience strings (if the project's locale has catalogs)
-        context['last_updated_by'] = translate('by %(author)s') % {'author': author}
-        context['last_updated_full'] = translate('Last updated on %(date)s by %(author)s') % {
-            'date': date_str,
-            'author': author,
-        }
+        # Append localized "by <author>" to the date string
+        author_str = translate('by %(author)s') % {'author': author}
+        context['last_updated'] = date_str + ' ' + author_str
     else:
-        # Ensure keys aren't leaked from other pages
-        for key in ('last_updated_author', 'last_updated_by', 'last_updated_full'):
-            if key in context:
-                del context[key]
+        context['last_updated'] = date_str
 
     if app.config.git_last_updated_metatags:
         context['metatags'] += """
