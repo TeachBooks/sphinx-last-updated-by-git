@@ -53,7 +53,7 @@ def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
     assert requested_files
 
     git_log_args = [
-        'git', 'log', '--pretty=format:%n%at%x00%H%x00%P',
+        'git', 'log', '--pretty=format:%n%at%x00%H%x00%P%x00%aN',
         '--author-date-order', '--relative', '--name-only',
         '--no-show-signature', '-z', '-m'
     ]
@@ -95,9 +95,9 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
                 type='git', subtype='unhandled_files')
             break
         pieces = line1.rstrip().split(b'\0')
-        assert len(pieces) == 3, 'invalid git info in {}: {}'.format(
+        assert len(pieces) == 4, 'invalid git info in {}: {}'.format(
             git_dir, line1)
-        timestamp, commit, parent_commits = pieces
+        timestamp, commit, parent_commits, author = pieces
         line2 = stream.readline().rstrip()
         assert line2.endswith(b'\0'), 'unexpected file list in {}: {}'.format(
             git_dir, line2)
@@ -126,7 +126,7 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
             except KeyError:
                 continue
             else:
-                file_dates[file.decode('utf-8')] = timestamp, too_shallow
+                file_dates[file.decode('utf-8')] = timestamp, too_shallow, author.decode('utf-8')
 
 
 def _env_updated(app, env):
@@ -230,7 +230,7 @@ def _env_updated(app, env):
         timestamps = candi_dates[docname]
         if timestamps:
             # NB: too_shallow is only relevant if it affects the latest date.
-            timestamp, too_shallow = max(timestamps)
+            timestamp, too_shallow, author = max(timestamps)
             if too_shallow:
                 timestamp = None
                 logger.warning(
@@ -238,7 +238,8 @@ def _env_updated(app, env):
                     type='git', subtype='too_shallow')
         else:
             timestamp = None
-        env.git_last_updated[docname] = timestamp, show_sourcelink[docname]
+            author = None
+        env.git_last_updated[docname] = timestamp, show_sourcelink[docname], author
 
 
 def _html_page_context(app, pagename, templatename, context, doctree):
@@ -256,8 +257,9 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         # There was a problem with git, a warning has already been issued
         timestamp = None
         show_sourcelink = False
+        author = None
     else:
-        timestamp, show_sourcelink = data
+        timestamp, show_sourcelink, author = data
     if not show_sourcelink:
         del context['sourcename']
         del context['page_source_suffix']
@@ -266,10 +268,13 @@ def _html_page_context(app, pagename, templatename, context, doctree):
 
     utc_date = datetime.fromtimestamp(int(timestamp), timezone.utc)
     date = utc_date.astimezone(app.config.git_last_updated_timezone)
-    context['last_updated'] = format_date(
+    last_updated_text = format_date(
         lufmt or _('%b %d, %Y'),
         date=date,
         language=app.config.language)
+    if author and app.config.git_show_author:
+        last_updated_text += ' ' + _('by') + ' ' + author
+    context['last_updated'] = last_updated_text
 
     if app.config.git_last_updated_metatags:
         context['metatags'] += """
@@ -335,6 +340,8 @@ def setup(app):
         'git_last_updated_timezone', None, rebuild='env')
     app.add_config_value(
         'git_last_updated_metatags', True, rebuild='html')
+    app.add_config_value(
+        'git_show_author', False, rebuild='html')
     app.add_config_value('git_exclude_patterns', [], rebuild='env')
     app.add_config_value(
         'git_exclude_commits', [], rebuild='env')
