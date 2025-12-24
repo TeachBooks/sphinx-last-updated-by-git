@@ -26,7 +26,7 @@ MESSAGE_CATALOG_NAME = 'sphinx_last_updated_by_git'
 translate = get_translation(MESSAGE_CATALOG_NAME)
 
 
-def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
+def update_file_dates(git_dir, exclude_commits, file_dates, first_parent, show_merge_commits):
     """Ask Git for "author date" of given files in given directory.
 
     A git subprocess is executed at most three times:
@@ -59,8 +59,10 @@ def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
     git_log_args = [
         'git', 'log', '--pretty=format:%n%at%x00%H%x00%P%x00%aN',
         '--author-date-order', '--relative', '--name-only',
-        '--no-show-signature', '-z', '-m'
+        '--no-show-signature', '-z'
     ]
+    if show_merge_commits:
+        git_log_args.append('-m')
     if first_parent:
         git_log_args.append('--first-parent')
     git_log_args.extend(['--', *requested_files])
@@ -87,8 +89,12 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
     assert not line0.rstrip(), 'unexpected git output in {}: {}'.format(
         git_dir, line0)
 
+    pending_header = None
     while requested_files:
-        line1 = stream.readline()
+        # Use pending_header if we read ahead in the previous iteration
+        line1 = pending_header if pending_header is not None else stream.readline()
+        pending_header = None
+        
         if not line1:
             msg = 'end of git log in {}, unhandled files: {}'
             assert exclude_commits, msg.format(
@@ -99,15 +105,24 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
                 type='git', subtype='unhandled_files')
             break
         pieces = line1.rstrip().split(b'\0')
-        assert len(pieces) == 4, 'invalid git info in {}: {}'.format(
+        # Git outputs 3 pieces for regular commits, but 4 for merge commits
+        # (with trailing NUL) when -m is not used. The 4th piece is empty.
+        assert len(pieces) in (4, 5), 'invalid git info in {}: {}'.format(
             git_dir, line1)
-        timestamp, commit, parent_commits, author = pieces
+        timestamp, commit, parent_commits, author = pieces[:4]
         line2 = stream.readline().rstrip()
-        assert line2.endswith(b'\0'), 'unexpected file list in {}: {}'.format(
-            git_dir, line2)
+        
+        # Without -m, merge commits have no file list. If line2 doesn't end
+        # with NUL, it's the next commit header, not a file list.
+        if not line2.endswith(b'\0'):
+            # Save it as the next header and skip this commit
+            pending_header = line2
+            continue
+            
         line2 = line2.rstrip(b'\0')
-        assert line2, 'no changed files in {} (parent commit(s): {})'.format(
-            git_dir, parent_commits)
+        if not line2:
+            # Explicit empty file list: skip this commit
+            continue
         changed_files = line2.split(b'\0')
 
         if commit in exclude_commits:
@@ -164,7 +179,8 @@ def _env_updated(app, env):
         try:
             update_file_dates(
                 git_dir, exclude_commits, src_dates[git_dir],
-                first_parent=app.config.git_first_parent)
+                first_parent=app.config.git_first_parent,
+                show_merge_commits=app.config.git_show_merge_commits)
         except subprocess.CalledProcessError as e:
             msg = 'Error getting data from Git'
             msg += ' (no "last updated" dates will be shown'
@@ -219,7 +235,8 @@ def _env_updated(app, env):
         try:
             update_file_dates(
                 git_dir, exclude_commits, dep_dates[git_dir],
-                first_parent=app.config.git_first_parent)
+                first_parent=app.config.git_first_parent,
+                show_merge_commits=app.config.git_show_merge_commits)
         except subprocess.CalledProcessError as e:
             pass  # We ignore errors in dependencies
 
@@ -361,7 +378,9 @@ def setup(app):
     app.add_config_value(
         'git_exclude_commits', [], rebuild='env')
     app.add_config_value(
-        'git_first_parent', True, rebuild='env')
+        'git_first_parent', False, rebuild='env')
+    app.add_config_value(
+        'git_show_merge_commits', False, rebuild='env')
     return {
         'version': __version__,
         'parallel_read_safe': True,
