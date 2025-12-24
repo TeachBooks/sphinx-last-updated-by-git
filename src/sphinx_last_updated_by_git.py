@@ -156,53 +156,85 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
 
 
 def update_file_authors(git_dir, file_list, file_authors):
-    """Collect all authors who modified given files (entire history)."""
+    """Collect all authors who modified given files (entire history).
+
+    Supports both output shapes from Git for ``--name-only -z``:
+    1) author and files on the same record (``author\0file\0file\0``) and
+    2) author on one record (``author\0``) followed by a record of files
+       (``file\0file\0``). Records are newline (``\n``) separated.
+    """
     if not file_list:
         return
-    
+
     git_log_args = [
         'git', 'log', '--pretty=format:%aN%x00', '--name-only',
         '--no-show-signature', '-z', '--', *file_list
     ]
-    
+
     process = subprocess.Popen(
         git_log_args,
         cwd=git_dir,
         stdout=subprocess.PIPE,
     )
-    
+
     with process:
         output = process.stdout.read()
         process.wait()
-    
-    # Parse output: format is author\0\nfile1\0file2\0\nauthor\0\nfile3\0...
-    entries = output.split(b'\n')
-    
-    i = 0
-    while i < len(entries):
-        # Each commit starts with author\0
-        if not entries[i]:
-            i += 1
+
+    # Iterate records separated by newlines, associating an author with the
+    # subsequent filenames record when needed.
+    records = output.split(b'\n')
+    pending_author = None
+    for rec in records:
+        if not rec:
             continue
-        
-        parts = entries[i].split(b'\0')
-        if len(parts) < 2:
-            i += 1
+        parts = rec.rstrip(b'\0').split(b'\0')
+        if not parts:
             continue
-        
-        author = parts[0].decode('utf-8')
-        # Rest of parts[1:] are files (may be empty)
-        
-        # Next line contains the files if not already in parts
-        i += 1
-        if i < len(entries) and entries[i]:
-            file_parts = entries[i].rstrip(b'\0').split(b'\0')
-            for file_bytes in file_parts:
-                if file_bytes:
-                    filename = file_bytes.decode('utf-8')
-                    if filename in file_list:
-                        file_authors[filename].add(author)
-        i += 1
+        if pending_author is None:
+            # Expect an author record; files may be present in same record
+            author = parts[0].decode('utf-8', 'replace')
+            files = [p for p in parts[1:] if p]
+            if not files:
+                pending_author = author
+                continue
+        else:
+            # This record should contain files for the pending author
+            author = pending_author
+            files = [p for p in parts if p]
+            pending_author = None
+        for fb in files:
+            try:
+                filename = fb.decode('utf-8')
+            except Exception:
+                continue
+            if filename in file_list and author:
+                file_authors[filename].add(author)
+
+
+def update_file_authors_follow_per_file(git_dir, file_list, file_authors):
+    """Collect authors per file using ``git log --follow``.
+
+    This follows renames/moves for each file individually and unions authors.
+    It's more expensive (one git call per file) and differs from the
+    default batch approach which does not use ``--follow``.
+    """
+    for filename in file_list:
+        try:
+            proc = subprocess.run(
+                ['git', 'log', '--follow', '--format=%aN', '--', filename],
+                cwd=git_dir, check=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            continue
+        authors = set(
+            a.strip()
+            for a in proc.stdout.decode('utf-8', 'replace').splitlines()
+            if a.strip()
+        )
+        if authors:
+            file_authors[filename].update(authors)
 
 
 def _env_updated(app, env):
@@ -332,7 +364,10 @@ def _env_updated(app, env):
             ]
             if files_to_check:
                 try:
-                    update_file_authors(git_dir, files_to_check, all_authors)
+                    # Always follow renames to include full author history
+                    update_file_authors_follow_per_file(
+                        git_dir, files_to_check, all_authors
+                    )
                 except (subprocess.CalledProcessError, FileNotFoundError):
                     pass  # Ignore errors in author collection
         
@@ -343,7 +378,9 @@ def _env_updated(app, env):
             ]
             if files_to_check:
                 try:
-                    update_file_authors(git_dir, files_to_check, all_authors)
+                    update_file_authors_follow_per_file(
+                        git_dir, files_to_check, all_authors
+                    )
                 except (subprocess.CalledProcessError, FileNotFoundError):
                     pass
         
