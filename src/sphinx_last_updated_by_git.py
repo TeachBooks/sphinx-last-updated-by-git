@@ -26,7 +26,9 @@ MESSAGE_CATALOG_NAME = 'sphinx_last_updated_by_git'
 translate = get_translation(MESSAGE_CATALOG_NAME)
 
 
-def update_file_dates(git_dir, exclude_commits, file_dates, first_parent, show_merge_commits):
+def update_file_dates(
+        git_dir, exclude_commits, file_dates, first_parent,
+        show_merge_commits):
     """Ask Git for "author date" of given files in given directory.
 
     A git subprocess is executed at most three times:
@@ -92,9 +94,12 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
     pending_header = None
     while requested_files:
         # Use pending_header if we read ahead in the previous iteration
-        line1 = pending_header if pending_header is not None else stream.readline()
+        line1 = (
+            pending_header if pending_header is not None
+            else stream.readline()
+        )
         pending_header = None
-        
+
         if not line1:
             msg = 'end of git log in {}, unhandled files: {}'
             assert exclude_commits, msg.format(
@@ -111,14 +116,14 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
             git_dir, line1)
         timestamp, commit, parent_commits, author = pieces[:4]
         line2 = stream.readline().rstrip()
-        
+
         # Without -m, merge commits have no file list. If line2 doesn't end
         # with NUL, it's the next commit header, not a file list.
         if not line2.endswith(b'\0'):
             # Save it as the next header and skip this commit
             pending_header = line2
             continue
-            
+
         line2 = line2.rstrip(b'\0')
         if not line2:
             # Explicit empty file list: skip this commit
