@@ -97,9 +97,9 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
                 type='git', subtype='unhandled_files')
             break
         pieces = line1.rstrip().split(b'\0')
-        assert len(pieces) == 3, 'invalid git info in {}: {}'.format(
+        assert len(pieces) in (3, 4), 'invalid git info in {}: {}'.format(
             git_dir, line1)
-        timestamp, commit, parent_commits = pieces
+        timestamp, commit, parent_commits = pieces[:3]
         line2 = stream.readline().rstrip()
         assert line2.endswith(b'\0'), 'unexpected file list in {}: {}'.format(
             git_dir, line2)
