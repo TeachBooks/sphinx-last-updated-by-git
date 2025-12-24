@@ -59,6 +59,8 @@ Options
       time for large repositories. Author names are sorted alphabetically.
       You can also combine this with ``git_show_author = True`` if desired,
       but ``git_show_all_authors = True`` alone is sufficient to display authors.
+      Co-authors listed in commit message trailers (``Co-authored-by:``) are
+      also included automatically; emails are stripped and only names are shown.
 
     * Author aliases: if your Git history has usernames and you want to show
       real names (or any custom label) in the footer, set

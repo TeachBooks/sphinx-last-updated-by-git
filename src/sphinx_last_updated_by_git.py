@@ -3,6 +3,7 @@ from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
+import re
 import subprocess
 
 from sphinx.locale import _, get_translation
@@ -166,17 +167,35 @@ def update_file_authors_follow_per_file(git_dir, file_list, file_authors):
     for filename in file_list:
         try:
             proc = subprocess.run(
-                ['git', 'log', '--follow', '--format=%aN', '--', filename],
+                [
+                    'git', 'log', '--follow',
+                    '--format=%aN%x00%(trailers:key=Co-authored-by,valueonly,separator=%x00,unfold)%x00',
+                    '--', filename
+                ],
                 cwd=git_dir, check=True, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
         except (subprocess.CalledProcessError, FileNotFoundError):
             continue
-        authors = set(
-            a.strip()
-            for a in proc.stdout.decode('utf-8', 'replace').splitlines()
-            if a.strip()
-        )
+        authors = set()
+        for line in proc.stdout.decode('utf-8', 'replace').splitlines():
+            if not line:
+                continue
+            parts = [p for p in line.split('\x00') if p]
+            if not parts:
+                continue
+            # First part is the main author name
+            main = parts[0].strip()
+            if main:
+                authors.add(main)
+            # Remaining parts are Co-authored-by values; strip emails
+            for co in parts[1:]:
+                co = co.strip()
+                if not co:
+                    continue
+                name_only = re.sub(r"\s*<[^>]+>\s*$", "", co).strip()
+                if name_only:
+                    authors.add(name_only)
         if authors:
             key = (git_dir, filename)
             file_authors[key].update(authors)
