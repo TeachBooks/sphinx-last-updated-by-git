@@ -162,6 +162,7 @@ def update_file_authors_follow_per_file(git_dir, file_list, file_authors):
     It's more expensive (one git call per file) and differs from the
     default batch approach which does not use ``--follow``.
     """
+    git_dir = Path(git_dir)
     for filename in file_list:
         try:
             proc = subprocess.run(
@@ -177,7 +178,8 @@ def update_file_authors_follow_per_file(git_dir, file_list, file_authors):
             if a.strip()
         )
         if authors:
-            file_authors[filename].update(authors)
+            key = (git_dir, filename)
+            file_authors[key].update(authors)
             logger.debug(
                 'git authors (%d) for %s in %s',
                 len(authors), filename, git_dir
@@ -351,14 +353,16 @@ def _env_updated(app, env):
             # Collect authors from source file and its dependencies
             authors_set = set()
             considered_files = []
-            if filename in all_authors:
-                authors_set.update(all_authors[filename])
-                considered_files.append(filename)
+            src_key = (src_dir, filename)
+            if src_key in all_authors:
+                authors_set.update(all_authors[src_key])
+                considered_files.append(Path(src_dir, filename))
             
             for dep_dir, dep_filename in dep_paths.get(docname, []):
-                if dep_filename in all_authors:
-                    authors_set.update(all_authors[dep_filename])
-                    considered_files.append(dep_filename)
+                dep_key = (dep_dir, dep_filename)
+                if dep_key in all_authors:
+                    authors_set.update(all_authors[dep_key])
+                    considered_files.append(Path(dep_dir, dep_filename))
             
             # Replace single author with set of all authors
             env.git_last_updated[docname] = (
@@ -368,7 +372,9 @@ def _env_updated(app, env):
             if considered_files:
                 logger.debug(
                     'authors inputs for %s: %s',
-                    docname, ', '.join(sorted(considered_files))
+                    docname, ', '.join(
+                        sorted(to_relpath(Path(f)) for f in considered_files)
+                    )
                 )
 
 
