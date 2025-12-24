@@ -130,7 +130,9 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
             except KeyError:
                 continue
             else:
-                file_dates[file.decode('utf-8')] = timestamp, too_shallow, author.decode('utf-8')
+                file_dates[file.decode('utf-8')] = (
+                    timestamp, too_shallow, author.decode('utf-8')
+                )
 
 
 def _env_updated(app, env):
@@ -243,7 +245,9 @@ def _env_updated(app, env):
         else:
             timestamp = None
             author = None
-        env.git_last_updated[docname] = timestamp, show_sourcelink[docname], author
+        env.git_last_updated[docname] = (
+            timestamp, show_sourcelink[docname], author
+        )
 
 
 def _html_page_context(app, pagename, templatename, context, doctree):
@@ -355,7 +359,8 @@ def setup(app):
         locale_dir = str((Path(__file__).parent / 'locale').resolve())
         app.add_message_catalog(MESSAGE_CATALOG_NAME, locale_dir)
     except Exception:
-        # If unavailable at build time, fail gracefully; strings will fall back to English
+        # If unavailable at build time, fail gracefully;
+        # strings will fall back to English
         pass
     app.add_config_value('git_exclude_patterns', [], rebuild='env')
     app.add_config_value(
