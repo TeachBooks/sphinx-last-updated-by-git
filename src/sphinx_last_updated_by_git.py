@@ -155,6 +155,56 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
                 )
 
 
+def update_file_authors(git_dir, file_list, file_authors):
+    """Collect all authors who modified given files (entire history)."""
+    if not file_list:
+        return
+    
+    git_log_args = [
+        'git', 'log', '--pretty=format:%aN%x00', '--name-only',
+        '--no-show-signature', '-z', '--', *file_list
+    ]
+    
+    process = subprocess.Popen(
+        git_log_args,
+        cwd=git_dir,
+        stdout=subprocess.PIPE,
+    )
+    
+    with process:
+        output = process.stdout.read()
+        process.wait()
+    
+    # Parse output: format is author\0\nfile1\0file2\0\nauthor\0\nfile3\0...
+    entries = output.split(b'\n')
+    
+    i = 0
+    while i < len(entries):
+        # Each commit starts with author\0
+        if not entries[i]:
+            i += 1
+            continue
+        
+        parts = entries[i].split(b'\0')
+        if len(parts) < 2:
+            i += 1
+            continue
+        
+        author = parts[0].decode('utf-8')
+        # Rest of parts[1:] are files (may be empty)
+        
+        # Next line contains the files if not already in parts
+        i += 1
+        if i < len(entries) and entries[i]:
+            file_parts = entries[i].rstrip(b'\0').split(b'\0')
+            for file_bytes in file_parts:
+                if file_bytes:
+                    filename = file_bytes.decode('utf-8')
+                    if filename in file_list:
+                        file_authors[filename].add(author)
+        i += 1
+
+
 def _env_updated(app, env):
     # NB: We call git once per sub-directory, because each one could
     #     potentially be a separate Git repo (or at least a submodule)!
@@ -271,6 +321,53 @@ def _env_updated(app, env):
             timestamp, show_sourcelink[docname], author
         )
 
+    # Optionally collect all authors for each file
+    if app.config.git_show_all_authors:
+        all_authors = defaultdict(set)
+        
+        # Collect authors from source files
+        for git_dir in src_dates:
+            files_to_check = [
+                f for f, data in src_dates[git_dir].items() if data
+            ]
+            if files_to_check:
+                try:
+                    update_file_authors(git_dir, files_to_check, all_authors)
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    pass  # Ignore errors in author collection
+        
+        # Collect authors from dependencies
+        for git_dir in dep_dates:
+            files_to_check = [
+                f for f, data in dep_dates[git_dir].items() if data
+            ]
+            if files_to_check:
+                try:
+                    update_file_authors(git_dir, files_to_check, all_authors)
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    pass
+        
+        # Merge all_authors into env.git_last_updated
+        for docname, (src_dir, filename) in src_paths.items():
+            timestamp, show_sourcelink, single_author = (
+                env.git_last_updated[docname]
+            )
+            
+            # Collect authors from source file and its dependencies
+            authors_set = set()
+            if filename in all_authors:
+                authors_set.update(all_authors[filename])
+            
+            for dep_dir, dep_filename in dep_paths.get(docname, []):
+                if dep_filename in all_authors:
+                    authors_set.update(all_authors[dep_filename])
+            
+            # Replace single author with set of all authors
+            env.git_last_updated[docname] = (
+                timestamp, show_sourcelink, authors_set or {single_author}
+                if single_author else set()
+            )
+
 
 def _html_page_context(app, pagename, templatename, context, doctree):
     context['last_updated'] = None
@@ -306,10 +403,35 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         date=date,
         language=app.config.language)
 
-    if author and app.config.git_show_author:
-        # Append localized "by <author>" to the date string
-        author_str = translate('by %(author)s') % {'author': author}
-        context['last_updated'] = date_str + ' ' + author_str
+    if author and (app.config.git_show_author or app.config.git_show_all_authors):
+        # Handle both single author (string) and multiple authors (set)
+        if isinstance(author, set):
+            # Format multiple authors: "edited by Author1, Author2, and Author3"
+            authors_list = sorted(author)
+            if len(authors_list) == 1:
+                author_names = authors_list[0]
+            elif len(authors_list) == 2:
+                author_names = translate('%(author1)s and %(author2)s') % {
+                    'author1': authors_list[0],
+                    'author2': authors_list[1]
+                }
+            else:
+                # Three or more authors: "Author1, Author2, and Author3"
+                all_but_last = ', '.join(authors_list[:-1])
+                author_names = translate(
+                    '%(authors)s, and %(last_author)s') % {
+                    'authors': all_but_last,
+                    'last_author': authors_list[-1]
+                }
+            # Use "edited by" for all authors list
+            author_str = translate('edited by %(author)s') % {
+                'author': author_names
+            }
+            context['last_updated'] = date_str + ', ' + author_str
+        else:
+            # Single author (most recent): use "by" without comma
+            author_str = translate('by %(author)s') % {'author': author}
+            context['last_updated'] = date_str + ' ' + author_str
     else:
         context['last_updated'] = date_str
 
@@ -379,6 +501,8 @@ def setup(app):
         'git_last_updated_metatags', True, rebuild='html')
     app.add_config_value(
         'git_show_author', False, rebuild='html')
+    app.add_config_value(
+        'git_show_all_authors', False, rebuild='env')
     # Register this extension's message catalog for i18n of convenience strings
     try:
         locale_dir = str((Path(__file__).parent / 'locale').resolve())

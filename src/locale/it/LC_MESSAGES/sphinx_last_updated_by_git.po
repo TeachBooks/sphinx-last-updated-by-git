@@ -12,3 +12,15 @@ msgstr ""
 #: src/sphinx_last_updated_by_git.py
 msgid "by %(author)s"
 msgstr "da %(author)s"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "edited by %(author)s"
+msgstr "modificato da %(author)s"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "%(author1)s and %(author2)s"
+msgstr "%(author1)s e %(author2)s"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "%(authors)s, and %(last_author)s"
+msgstr "%(authors)s e %(last_author)s"

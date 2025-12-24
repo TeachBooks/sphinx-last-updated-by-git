@@ -11,3 +11,15 @@ msgstr ""
 #: src/sphinx_last_updated_by_git.py
 msgid "by %(author)s"
 msgstr "%(author)s tarafından"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "edited by %(author)s"
+msgstr "düzenleyen: %(author)s"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "%(author1)s and %(author2)s"
+msgstr "%(author1)s ve %(author2)s"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "%(authors)s, and %(last_author)s"
+msgstr "%(authors)s ve %(last_author)s"

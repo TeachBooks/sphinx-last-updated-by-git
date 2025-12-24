@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: sphinx-last-updated-by-git\n"
-"POT-Creation-Date: 2025-12-23 00:00+0000\n"
-"PO-Revision-Date: 2025-12-23 00:00+0000\n"
+"POT-Creation-Date: 2025-12-24 00:00+0000\n"
+"PO-Revision-Date: 2025-12-24 00:00+0000\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -12,3 +12,15 @@ msgstr ""
 #: src/sphinx_last_updated_by_git.py
 msgid "by %(author)s"
 msgstr "автор: %(author)s"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "edited by %(author)s"
+msgstr "редактор: %(author)s"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "%(author1)s and %(author2)s"
+msgstr "%(author1)s и %(author2)s"
+
+#: src/sphinx_last_updated_by_git.py
+msgid "%(authors)s, and %(last_author)s"
+msgstr "%(authors)s и %(last_author)s"

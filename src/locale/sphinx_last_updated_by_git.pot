@@ -1,0 +1,41 @@
+# Translation template for sphinx-last-updated-by-git
+# Copyright (C) 2025
+# This file is distributed under the same license as the sphinx-last-updated-by-git package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: sphinx-last-updated-by-git\n"
+"POT-Creation-Date: 2025-12-24 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/sphinx_last_updated_by_git.py
+#. Format string for attribution when showing only the last editor
+#. Example: "by John Doe"
+msgid "by %(author)s"
+msgstr ""
+
+#: src/sphinx_last_updated_by_git.py
+#. Format string for attribution when showing all file editors
+#. Example: "edited by Alice, Bob, and Carol"
+msgid "edited by %(author)s"
+msgstr ""
+
+#: src/sphinx_last_updated_by_git.py
+#. Format string for joining exactly two author names
+#. Example in English: "Alice and Bob"
+#. The word "and" should be translated appropriately for each language
+msgid "%(author1)s and %(author2)s"
+msgstr ""
+
+#: src/sphinx_last_updated_by_git.py
+#. Format string for joining three or more authors
+#. Example in English: "Alice, Bob, and Carol"
+#. The comma and "and" placement follows English conventions
+#. Translators should adapt punctuation and conjunctions for their language
+msgid "%(authors)s, and %(last_author)s"
+msgstr ""

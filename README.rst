@@ -50,6 +50,16 @@ Options
       This will append "by <author name>" to the date string.
       The author name is taken from the Git commit's author field (``%aN``).
 
+    * To show ALL authors who have edited a file (not just the most recent),
+      set ``git_show_all_authors = True`` in your ``conf.py``.
+      This will display "<date>, edited by <author1>, <author2>, and <author3>"
+      instead of just "<date> by <last author>".
+      Note: This performs an additional Git pass to collect all unique authors
+      (only when this option is enabled), which may slightly increase build
+      time for large repositories. Author names are sorted alphabetically.
+      You can also combine this with ``git_show_author = True`` if desired,
+      but ``git_show_all_authors = True`` alone is sufficient to display authors.
+
     * Files can be excluded from the last updated date calculation by passing
       a list of exclusion patterns to the configuration option
       ``git_exclude_patterns``.
