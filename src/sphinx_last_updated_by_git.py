@@ -413,10 +413,19 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         language=app.config.language)
 
     if author and (app.config.git_show_author or app.config.git_show_all_authors):
+        # Apply optional author alias mapping (e.g., username -> real name)
+        aliases = app.config.git_author_aliases or {}
+
+        def map_author(name: str) -> str:
+            return aliases.get(name, name)
+
         # Handle both single author (string) and multiple authors (set)
         if isinstance(author, set):
             # Format multiple authors: "edited by Author1, Author2, and Author3"
-            authors_list = sorted(author)
+            authors_mapped = [map_author(a) for a in author]
+            # Deduplicate after mapping to avoid repeated names when aliases merge
+            authors_list = sorted(set(authors_mapped))
+
             if len(authors_list) == 1:
                 author_names = authors_list[0]
             elif len(authors_list) == 2:
@@ -439,7 +448,7 @@ def _html_page_context(app, pagename, templatename, context, doctree):
             context['last_updated'] = date_str + ', ' + author_str
         else:
             # Single author (most recent): use "by" without comma
-            author_str = translate('by %(author)s') % {'author': author}
+            author_str = translate('by %(author)s') % {'author': map_author(author)}
             context['last_updated'] = date_str + ' ' + author_str
     else:
         context['last_updated'] = date_str
@@ -512,6 +521,8 @@ def setup(app):
         'git_show_author', False, rebuild='html')
     app.add_config_value(
         'git_show_all_authors', False, rebuild='env')
+    app.add_config_value(
+        'git_author_aliases', {}, rebuild='html')
     # Register this extension's message catalog for i18n of convenience strings
     try:
         locale_dir = str((Path(__file__).parent / 'locale').resolve())

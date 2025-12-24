@@ -60,6 +60,19 @@ Options
       You can also combine this with ``git_show_author = True`` if desired,
       but ``git_show_all_authors = True`` alone is sufficient to display authors.
 
+    * Author aliases: if your Git history has usernames and you want to show
+      real names (or any custom label) in the footer, set
+      ``git_author_aliases`` to a mapping in ``conf.py``, e.g.::
+
+        git_author_aliases = {
+          'johndoe': 'John Doe',
+          'alice': 'Alice Smith',
+        }
+
+      If an alias is defined, the displayed author name is replaced with the
+      mapped value. If multiple usernames map to the same display name, the
+      output is deduplicated.
+
     * Files can be excluded from the last updated date calculation by passing
       a list of exclusion patterns to the configuration option
       ``git_exclude_patterns``.
