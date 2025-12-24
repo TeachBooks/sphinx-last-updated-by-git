@@ -235,6 +235,10 @@ def update_file_authors_follow_per_file(git_dir, file_list, file_authors):
         )
         if authors:
             file_authors[filename].update(authors)
+            logger.debug(
+                'git authors (%d) for %s in %s',
+                len(authors), filename, git_dir
+            )
 
 
 def _env_updated(app, env):
@@ -356,34 +360,45 @@ def _env_updated(app, env):
     # Optionally collect all authors for each file
     if app.config.git_show_all_authors:
         all_authors = defaultdict(set)
+
+        # Build a de-duplicated set of files per repo dir (sources + deps)
+        authors_targets = defaultdict(set)
+        for git_dir, files in src_dates.items():
+            for f, data in files.items():
+                if data:
+                    authors_targets[git_dir].add(f)
+        for git_dir, files in dep_dates.items():
+            for f, data in files.items():
+                if data:
+                    authors_targets[git_dir].add(f)
+
+        # Single progress iterator over combined targets
+        author_iter = status_iterator(
+            authors_targets,
+            'collecting Git authors (following renames)... ',
+            'fuchsia', len(authors_targets), app.verbosity,
+            stringify_func=to_relpath)
+        for git_dir in author_iter:
+            files_to_check = sorted(authors_targets[git_dir])
+            if not files_to_check:
+                continue
+            try:
+                update_file_authors_follow_per_file(
+                    git_dir, files_to_check, all_authors
+                )
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                # Ignore errors in author collection
+                pass
         
-        # Collect authors from source files
-        for git_dir in src_dates:
-            files_to_check = [
-                f for f, data in src_dates[git_dir].items() if data
-            ]
-            if files_to_check:
-                try:
-                    # Always follow renames to include full author history
-                    update_file_authors_follow_per_file(
-                        git_dir, files_to_check, all_authors
-                    )
-                except (subprocess.CalledProcessError, FileNotFoundError):
-                    pass  # Ignore errors in author collection
-        
-        # Collect authors from dependencies
-        for git_dir in dep_dates:
-            files_to_check = [
-                f for f, data in dep_dates[git_dir].items() if data
-            ]
-            if files_to_check:
-                try:
-                    update_file_authors_follow_per_file(
-                        git_dir, files_to_check, all_authors
-                    )
-                except (subprocess.CalledProcessError, FileNotFoundError):
-                    pass
-        
+        # Log a brief summary and merge all_authors into env.git_last_updated
+        if all_authors:
+            uniq = set()
+            for s in all_authors.values():
+                uniq.update(s)
+            logger.debug(
+                'collected %d unique authors across %d files',
+                len(uniq), len(all_authors)
+            )
         # Merge all_authors into env.git_last_updated
         for docname, (src_dir, filename) in src_paths.items():
             timestamp, show_sourcelink, single_author = (
@@ -392,18 +407,26 @@ def _env_updated(app, env):
             
             # Collect authors from source file and its dependencies
             authors_set = set()
+            considered_files = []
             if filename in all_authors:
                 authors_set.update(all_authors[filename])
+                considered_files.append(filename)
             
             for dep_dir, dep_filename in dep_paths.get(docname, []):
                 if dep_filename in all_authors:
                     authors_set.update(all_authors[dep_filename])
+                    considered_files.append(dep_filename)
             
             # Replace single author with set of all authors
             env.git_last_updated[docname] = (
                 timestamp, show_sourcelink, authors_set or {single_author}
                 if single_author else set()
             )
+            if considered_files:
+                logger.debug(
+                    'authors inputs for %s: %s',
+                    docname, ', '.join(sorted(considered_files))
+                )
 
 
 def _html_page_context(app, pagename, templatename, context, doctree):
