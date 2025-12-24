@@ -155,63 +155,6 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
                 )
 
 
-def update_file_authors(git_dir, file_list, file_authors):
-    """Collect all authors who modified given files (entire history).
-
-    Supports both output shapes from Git for ``--name-only -z``:
-    1) author and files on the same record (``author\0file\0file\0``) and
-    2) author on one record (``author\0``) followed by a record of files
-       (``file\0file\0``). Records are newline (``\n``) separated.
-    """
-    if not file_list:
-        return
-
-    git_log_args = [
-        'git', 'log', '--pretty=format:%aN%x00', '--name-only',
-        '--no-show-signature', '-z', '--', *file_list
-    ]
-
-    process = subprocess.Popen(
-        git_log_args,
-        cwd=git_dir,
-        stdout=subprocess.PIPE,
-    )
-
-    with process:
-        output = process.stdout.read()
-        process.wait()
-
-    # Iterate records separated by newlines, associating an author with the
-    # subsequent filenames record when needed.
-    records = output.split(b'\n')
-    pending_author = None
-    for rec in records:
-        if not rec:
-            continue
-        parts = rec.rstrip(b'\0').split(b'\0')
-        if not parts:
-            continue
-        if pending_author is None:
-            # Expect an author record; files may be present in same record
-            author = parts[0].decode('utf-8', 'replace')
-            files = [p for p in parts[1:] if p]
-            if not files:
-                pending_author = author
-                continue
-        else:
-            # This record should contain files for the pending author
-            author = pending_author
-            files = [p for p in parts if p]
-            pending_author = None
-        for fb in files:
-            try:
-                filename = fb.decode('utf-8')
-            except Exception:
-                continue
-            if filename in file_list and author:
-                file_authors[filename].add(author)
-
-
 def update_file_authors_follow_per_file(git_dir, file_list, file_authors):
     """Collect authors per file using ``git log --follow``.
 

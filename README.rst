@@ -60,12 +60,6 @@ Options
       You can also combine this with ``git_show_author = True`` if desired,
       but ``git_show_all_authors = True`` alone is sufficient to display authors.
 
-    * Renames and moves: When ``git_show_all_authors = True``, the extension
-      follows renames by default and uses ``git log --follow`` per file to
-      union authors across the entire rename/move history. This may increase
-      build time for large repositories, as it requires one Git invocation
-      per file whose date was resolved.
-
     * Files can be excluded from the last updated date calculation by passing
       a list of exclusion patterns to the configuration option
       ``git_exclude_patterns``.
