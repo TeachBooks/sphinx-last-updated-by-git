@@ -289,8 +289,11 @@ def _html_page_context(app, pagename, templatename, context, doctree):
 
     utc_date = datetime.fromtimestamp(int(timestamp), timezone.utc)
     date = utc_date.astimezone(app.config.git_last_updated_timezone)
+    
+    # Format date according to user's preference if provided, otherwise use locale based on language
+    datefmt = lufmt or set_locale_date_fmt(app)
     date_str = format_date(
-        lufmt or _('%b %d, %Y'),
+        datefmt,
         date=date,
         language=app.config.language)
 
@@ -386,3 +389,64 @@ def setup(app):
         'parallel_read_safe': True,
         'env_version': 1,
     }
+
+
+def set_locale_date_fmt(app):
+    lang = (app.config.language or "en").replace("-", "_").lower()
+    fmt = FMT_BY_LANG.get(lang, FMT_BY_LANG.get(lang.split("_")[0], "%B %-d, %Y"))
+    return fmt
+
+
+# Map language codes to strftime patterns.
+# Adjust/extend as needed for your locales.
+
+FMT_BY_LANG = {
+    # English family (month name first)
+    "en": "%B %-d, %Y",
+    "en_GB": "%-d %B %Y",
+
+    # East Asian (year-first locales typically write D M Y for long text)
+    "zh-cn": "%Y年%-m月%-d日",       # Chinese (Simplified)
+    "zh-tw": "%Y年%-m月%-d日",       # Chinese (Traditional)
+    "ja": "%Y年%-m月%-d日",          # Japanese
+    "ko": "%Y년 %-m월 %-d일",        # Korean
+
+    # South Asian
+    "hi": "%-d %B %Y",              # Hindi
+    "bn": "%-d %B %Y",              # Bengali
+    "ta": "%-d %B %Y",              # Tamil
+
+    # Southeast Asian
+    "th": "%-d %B %Y",              # Thai (B.E. calendars exist, but Sphinx uses Python's G.E. year)
+    "vi": "%-d %B, %Y",             # Vietnamese
+    "id": "%-d %B %Y",              # Indonesian
+    "ms": "%-d %B %Y",              # Malay
+
+    # European Romance & Germanic
+    "es": "%-d de %B de %Y",        # Spanish
+    "fr": "%-d %B %Y",              # French
+    "pt": "%-d de %B de %Y",        # Portuguese
+    "it": "%-d %B %Y",              # Italian
+    "ro": "%-d %B %Y",              # Romanian
+    "nl": "%-d %B %Y",              # Dutch
+    "de": "%-d. %B %Y",             # German (note the dot after day)
+    "sv": "%-d %B %Y",              # Swedish
+    "no": "%-d. %B %Y",             # Norwegian (bokmål form commonly uses a dot)
+    "cs": "%-d. %B %Y",             # Czech
+    "hu": "%Y. %B %-d.",            # Hungarian (year. month day.)
+    "pl": "%-d %B %Y",              # Polish
+
+    # Hellenic & Slavic
+    "el": "%-d %B %Y",              # Greek
+    "ru": "%-d %B %Y г.",           # Russian (“г.” after year)
+    "uk": "%-d %B %Y р.",           # Ukrainian (“р.” after year)
+    "tr": "%-d %B %Y",              # Turkish
+
+    # Middle Eastern / RTL
+    "ar": "%-d %B %Y",              # Arabic
+    "fa": "%-d %B %Y",              # Persian
+    "he": "%-d ב%B %Y",             # Hebrew (preposition “ב” before month)
+
+    # Extras from your list
+    "sw": "%-d %B %Y",              # Swahili
+}
