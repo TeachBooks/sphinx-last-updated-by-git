@@ -71,7 +71,8 @@ Options
 
       If an alias is defined, the displayed author name is replaced with the
       mapped value. If multiple usernames map to the same display name, the
-      output is deduplicated.
+      output is deduplicated. Aliases are matched after trimming whitespace,
+      and if an exact key is not found, a lowercase key is also tried.
 
     * Files can be excluded from the last updated date calculation by passing
       a list of exclusion patterns to the configuration option

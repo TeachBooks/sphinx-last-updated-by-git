@@ -417,7 +417,8 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         aliases = app.config.git_author_aliases or {}
 
         def map_author(name: str) -> str:
-            return aliases.get(name, name)
+            base = name.strip()
+            return aliases.get(base) or aliases.get(base.lower()) or base
 
         # Handle both single author (string) and multiple authors (set)
         if isinstance(author, set):
