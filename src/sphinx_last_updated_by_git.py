@@ -413,22 +413,14 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         return
 
     data = app.env.git_last_updated[pagename]
+    # Check if there was a problem with git
     if data is None or (isinstance(data, tuple) and data[0] is None):
-        # There was a problem with git, a warning has already been issued
         timestamp = None
-        show_sourcelink = False
-        author = None
-        manual_authors = None
     else:
         # Handle both old (3-tuple) and new (4-tuple) format
-        if isinstance(data, tuple):
-            if len(data) == 4:
-                timestamp, show_sourcelink, author, manual_authors = data
-            else:
-                timestamp, show_sourcelink, author = data[:3]
-                manual_authors = None
-        else:
-            timestamp = show_sourcelink = author = manual_authors = None
+        timestamp, show_sourcelink, author = data[:3]
+        manual_authors = data[3] if len(data) > 3 else None
+    
     if timestamp is None:
         return
 
