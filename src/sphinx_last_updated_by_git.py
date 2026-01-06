@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 
+from docutils.parsers.rst import Directive
 from sphinx.locale import _, get_translation
 from sphinx.util.i18n import format_date
 from sphinx.util.logging import getLogger
@@ -564,12 +565,13 @@ def _builder_inited(app):
         env.git_last_updated = {}
 
 
-class AuthorDirective:
+class AuthorDirective(Directive):
     """Dummy directive for author metadata. The actual parsing is done by _parse_author_directives."""
     has_content = True
     required_arguments = 0
     optional_arguments = 1
     final_argument_whitespace = True
+    option_spec = {}
     
     def run(self):
         return []
