@@ -369,9 +369,16 @@ def _env_updated(app, env):
             )
         # Merge all_authors into env.git_last_updated
         for docname, (src_dir, filename) in src_paths.items():
-            timestamp, show_sourcelink, single_author = (
-                env.git_last_updated[docname]
-            )
+            existing = env.git_last_updated.get(docname)
+            # Handle both 4-tuple (with manual_authors) and 3-tuple formats
+            if existing and isinstance(existing, tuple):
+                if len(existing) == 4:
+                    timestamp, show_sourcelink, single_author, manual_authors = existing
+                else:
+                    timestamp, show_sourcelink, single_author = existing[:3]
+                    manual_authors = None
+            else:
+                timestamp = show_sourcelink = single_author = manual_authors = None
             
             # Collect authors from source file and its dependencies
             authors_set = set()
@@ -388,8 +395,6 @@ def _env_updated(app, env):
                     considered_files.append(Path(dep_dir, dep_filename))
             
             # Replace single author with set of all authors, preserve manual authors
-            existing = env.git_last_updated.get(docname)
-            manual_authors = existing[3] if existing and isinstance(existing, tuple) and len(existing) > 3 else None
             env.git_last_updated[docname] = (
                 timestamp, show_sourcelink, authors_set or {single_author}
                 if single_author else set(), manual_authors
