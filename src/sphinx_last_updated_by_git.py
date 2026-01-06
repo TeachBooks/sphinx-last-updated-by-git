@@ -414,7 +414,7 @@ def _html_page_context(app, pagename, templatename, context, doctree):
 
     data = app.env.git_last_updated[pagename]
     # Check if there was a problem with git
-    if data is None or (isinstance(data, tuple) and data[0] is None):
+    if data is None or data[0] is None:
         timestamp = None
     else:
         # Handle both old (3-tuple) and new (4-tuple) format
