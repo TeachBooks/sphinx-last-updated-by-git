@@ -317,8 +317,11 @@ def _env_updated(app, env):
         else:
             timestamp = None
             author = None
+        # Preserve manual authors if they were parsed in source-read
+        existing = env.git_last_updated.get(docname)
+        manual_authors = existing[1] if existing and isinstance(existing, tuple) and len(existing) > 1 else None
         env.git_last_updated[docname] = (
-            timestamp, show_sourcelink[docname], author
+            timestamp, show_sourcelink[docname], author, manual_authors
         )
 
     # Optionally collect all authors for each file
@@ -383,10 +386,12 @@ def _env_updated(app, env):
                     authors_set.update(all_authors[dep_key])
                     considered_files.append(Path(dep_dir, dep_filename))
             
-            # Replace single author with set of all authors
+            # Replace single author with set of all authors, preserve manual authors
+            existing = env.git_last_updated.get(docname)
+            manual_authors = existing[3] if existing and isinstance(existing, tuple) and len(existing) > 3 else None
             env.git_last_updated[docname] = (
                 timestamp, show_sourcelink, authors_set or {single_author}
-                if single_author else set()
+                if single_author else set(), manual_authors
             )
             if considered_files:
                 logger.debug(
@@ -408,13 +413,22 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         return
 
     data = app.env.git_last_updated[pagename]
-    if data is None:
+    if data is None or (isinstance(data, tuple) and data[0] is None):
         # There was a problem with git, a warning has already been issued
         timestamp = None
         show_sourcelink = False
         author = None
+        manual_authors = None
     else:
-        timestamp, show_sourcelink, author = data
+        # Handle both old (3-tuple) and new (4-tuple) format
+        if isinstance(data, tuple):
+            if len(data) == 4:
+                timestamp, show_sourcelink, author, manual_authors = data
+            else:
+                timestamp, show_sourcelink, author = data[:3]
+                manual_authors = None
+        else:
+            timestamp = show_sourcelink = author = manual_authors = None
     if not show_sourcelink:
         del context['sourcename']
         del context['page_source_suffix']
@@ -431,7 +445,66 @@ def _html_page_context(app, pagename, templatename, context, doctree):
         date=date,
         language=app.config.language)
 
-    if author and (app.config.git_show_author or app.config.git_show_all_authors):
+    # Check if manual authors should be displayed
+    if manual_authors and app.config.git_show_manual_author:
+        # Format manual authors list
+        if len(manual_authors) == 1:
+            manual_author_names = manual_authors[0]
+        elif len(manual_authors) == 2:
+            manual_author_names = translate('%(author1)s and %(author2)s') % {
+                'author1': manual_authors[0],
+                'author2': manual_authors[1]
+            }
+        else:
+            # Three or more authors
+            all_but_last = ', '.join(manual_authors[:-1])
+            manual_author_names = translate(
+                '%(authors)s, and %(last_author)s') % {
+                'authors': all_but_last,
+                'last_author': manual_authors[-1]
+            }
+        
+        # Display "Author: <manual authors>" first
+        manual_author_line = translate('Author: %(author)s') % {'author': manual_author_names}
+        
+        # Then show git authors as "edited by" on the date line if enabled
+        if author and (app.config.git_show_author or app.config.git_show_all_authors):
+            aliases = app.config.git_author_aliases or {}
+
+            def map_author(name: str) -> str:
+                base = name.strip()
+                return aliases.get(base) or aliases.get(base.lower()) or base
+
+            if isinstance(author, set):
+                authors_mapped = [map_author(a) for a in author]
+                authors_list = sorted(set(authors_mapped))
+
+                if len(authors_list) == 1:
+                    author_names = authors_list[0]
+                elif len(authors_list) == 2:
+                    author_names = translate('%(author1)s and %(author2)s') % {
+                        'author1': authors_list[0],
+                        'author2': authors_list[1]
+                    }
+                else:
+                    all_but_last = ', '.join(authors_list[:-1])
+                    author_names = translate(
+                        '%(authors)s, and %(last_author)s') % {
+                        'authors': all_but_last,
+                        'last_author': authors_list[-1]
+                    }
+                author_str = translate('edited by %(author)s') % {
+                    'author': author_names
+                }
+                context['last_updated'] = manual_author_line + '\n' + date_str + ', ' + author_str
+            else:
+                author_str = translate('edited by %(author)s') % {'author': map_author(author)}
+                context['last_updated'] = manual_author_line + '\n' + date_str + ', ' + author_str
+        else:
+            # Manual authors only, no git authors
+            context['last_updated'] = manual_author_line + '\n' + date_str
+    elif author and (app.config.git_show_author or app.config.git_show_all_authors):
+        # No manual authors, just git authors (existing behavior)
         # Apply optional author alias mapping (e.g., username -> real name)
         aliases = app.config.git_author_aliases or {}
 
@@ -494,6 +567,38 @@ def _builder_inited(app):
         env.git_last_updated = {}
 
 
+def _parse_author_directives(source_text):
+    """Extract author names from author directives.
+    
+    Supports both RST and MyST Markdown formats:
+    - RST: .. author:: Name
+    - MyST: ```{author} Name```
+    
+    Returns a list of author names or None if not found.
+    """
+    import re
+    
+    authors = []
+    
+    # RST directive format: .. author:: Name or .. author::\n   Name
+    # Match both single-line and multi-line variants
+    rst_pattern = r'^\.\.\s+author::\s*(.+?)$'
+    for match in re.finditer(rst_pattern, source_text, re.MULTILINE):
+        author = match.group(1).strip()
+        if author:
+            authors.append(author)
+    
+    # MyST directive format: ```{author} Name``` or {author}Name
+    # Match ```{author}\nName\n``` and {author} Name
+    myst_pattern = r'(?:```\{author\}\s*\n?\s*(.+?)\n?\s*```|\{author\}\s+(.+?)(?:\n|$))'
+    for match in re.finditer(myst_pattern, source_text, re.MULTILINE | re.DOTALL):
+        author = (match.group(1) or match.group(2)).strip()
+        if author:
+            authors.append(author)
+    
+    return authors if authors else None
+
+
 def _source_read(app, docname, source):
     env = app.env
     if docname not in env.found_docs:
@@ -505,7 +610,14 @@ def _source_read(app, docname, source):
         # Again since Sphinx 7.2, the source-read hook can be called
         # multiple times when using the "include" directive.
         return
-    env.git_last_updated[docname] = None
+    
+    # Initialize with None for git data; parse manual authors if enabled
+    manual_authors = None
+    if app.config.git_show_manual_author and source and source[0]:
+        manual_authors = _parse_author_directives(source[0])
+    
+    # Store as (git_data, manual_authors) where git_data will be filled in _env_updated
+    env.git_last_updated[docname] = (None, manual_authors)
 
 
 def _env_merge_info(app, env, docnames, other):
@@ -541,6 +653,8 @@ def setup(app):
         'git_show_author', False, rebuild='html')
     app.add_config_value(
         'git_show_all_authors', False, rebuild='env')
+    app.add_config_value(
+        'git_show_manual_author', False, rebuild='html')
     app.add_config_value(
         'git_author_aliases', {}, rebuild='html')
     # Register this extension's message catalog for i18n of convenience strings

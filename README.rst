@@ -76,6 +76,35 @@ Options
       output is deduplicated. Aliases are matched after trimming whitespace,
       and if an exact key is not found, a lowercase key is also tried.
 
+    * Manual authors: you can define authors manually using author directives
+      in your documents (e.g., for documents with contributors not reflected in
+      Git history). To enable this feature, set ``git_show_manual_author = True``
+      in your ``conf.py``. Then add author directives in your document::
+
+        .. author:: John Doe
+        .. author:: Jane Smith
+
+      This syntax works in reStructuredText files.
+      For MyST Markdown, you can use::
+
+        ```{author} John Doe
+        ```
+        ```{author} Jane Smith
+        ```
+
+      or inline::
+
+        {author} John Doe
+        {author} Jane Smith
+
+      When manual authors are defined, they will be displayed as
+      "Author: <author1>, <author2>, and <author3>" on a separate line,
+      followed by the last updated date and Git authors (if ``git_show_author``
+      or ``git_show_all_authors`` is also enabled) as
+      "Last updated on <date>, edited by <git authors>".
+      If only manual authors are defined (no Git author display enabled),
+      the output will be "Author: <authors>" followed by "Last updated on <date>".
+
     * Files can be excluded from the last updated date calculation by passing
       a list of exclusion patterns to the configuration option
       ``git_exclude_patterns``.
@@ -211,6 +240,8 @@ Similar stuff
     usage/configuration.html#confval-html_show_sourcelink
 .. _html_last_updated_fmt: https://www.sphinx-doc.org/en/master/
     usage/configuration.html#confval-html_last_updated_fmt
+.. _language: https://www.sphinx-doc.org/en/master/
+    usage/configuration.html#confval-language
 .. _datetime.timezone: https://docs.python.org/3/library/
     datetime.html#timezone-objects
 .. _babel: https://babel.pocoo.org/

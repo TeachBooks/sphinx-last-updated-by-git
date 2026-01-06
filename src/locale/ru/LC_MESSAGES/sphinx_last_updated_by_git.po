@@ -9,8 +9,10 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: src/sphinx_last_updated_by_git.py
-msgid "by %(author)s"
+#: src/sphinx_last_updated_by_git.pymsgid "Author: %(author)s"
+msgstr "Автор: %(author)s"
+
+#: src/sphinx_last_updated_by_git.pymsgid "by %(author)s"
 msgstr "автор: %(author)s"
 
 #: src/sphinx_last_updated_by_git.py

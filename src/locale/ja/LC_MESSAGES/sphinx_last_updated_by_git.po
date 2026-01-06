@@ -8,8 +8,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/sphinx_last_updated_by_git.py
-msgid "by %(author)s"
+#: src/sphinx_last_updated_by_git.pymsgid "Author: %(author)s"
+msgstr "著者: %(author)s"
+
+#: src/sphinx_last_updated_by_git.pymsgid "by %(author)s"
 msgstr "%(author)s によって"
 
 #: src/sphinx_last_updated_by_git.py
