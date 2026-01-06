@@ -221,8 +221,8 @@ def _env_updated(app, env):
         map(lambda h: h.encode('utf-8'), app.config.git_exclude_commits))
 
     for docname, data in env.git_last_updated.items():
-        if data is not None:
-            continue  # No need to update this source file
+        if data is not None and data[0] is not None:
+            continue  # No need to update this source file (already has git data)
         if excluded(env.doc2path(docname, False)):
             continue
         srcfile = Path(env.doc2path(docname)).resolve()
@@ -564,6 +564,17 @@ def _builder_inited(app):
         env.git_last_updated = {}
 
 
+class AuthorDirective:
+    """Dummy directive for author metadata. The actual parsing is done by _parse_author_directives."""
+    has_content = True
+    required_arguments = 0
+    optional_arguments = 1
+    final_argument_whitespace = True
+    
+    def run(self):
+        return []
+
+
 def _parse_author_directives(source_text):
     """Extract author names from author directives.
     
@@ -638,6 +649,7 @@ def setup(app):
     app.connect('source-read', _source_read)
     app.connect('env-merge-info', _env_merge_info)
     app.connect('env-purge-doc', _env_purge_doc)
+    app.add_directive('author', AuthorDirective)
     app.add_config_value(
         'git_untracked_check_dependencies', True, rebuild='env')
     app.add_config_value(
