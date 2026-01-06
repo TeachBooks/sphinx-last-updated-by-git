@@ -485,13 +485,13 @@ def _html_page_context(app, pagename, templatename, context, doctree):
                 author_str = translate('edited by %(author)s') % {
                     'author': author_names
                 }
-                context['last_updated'] = manual_author_line + '\n' + date_str + ', ' + author_str
+                context['last_updated'] = date_str + ', ' + author_str + '\n' + manual_author_line
             else:
                 author_str = translate('edited by %(author)s') % {'author': map_author(author)}
-                context['last_updated'] = manual_author_line + '\n' + date_str + ', ' + author_str
+                context['last_updated'] = date_str + ', ' + author_str + '\n' + manual_author_line
         else:
             # Manual authors only, no git authors
-            context['last_updated'] = manual_author_line + '\n' + date_str
+            context['last_updated'] = date_str + '\n' + manual_author_line
     elif author and (app.config.git_show_author or app.config.git_show_all_authors):
         # No manual authors, just git authors (existing behavior)
         # Apply optional author alias mapping (e.g., username -> real name)
