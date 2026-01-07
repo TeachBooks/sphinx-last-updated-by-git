@@ -333,7 +333,7 @@ def setup(app):
     app.add_config_value(
         'git_untracked_check_dependencies', True, rebuild='env')
     app.add_config_value(
-        'git_untracked_show_sourcelink', False, rebuild='env')
+        'git_untracked_show_sourcelink', True, rebuild='env')
     app.add_config_value(
         'git_last_updated_timezone', None, rebuild='env')
     app.add_config_value(
