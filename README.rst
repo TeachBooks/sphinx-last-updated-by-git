@@ -140,11 +140,6 @@ Caveats
 
       See also `issue #40`_.
 
-    * If ``git_untracked_show_sourcelink = False``, and an untracked 
-      `Text-based Notebooks <https://myst-nb.readthedocs.io/en/latest/authoring/text-notebooks.html>`_
-      or an untracked `Jupyter Notebooks <https://myst-nb.readthedocs.io/en/latest/authoring/jupyter-notebooks.html>`_
-      source file is included in the documentation, an error will occur.
-
 License
     BSD-2-Clause (same as Sphinx itself),
     for more information take a look at the ``LICENSE`` file.
