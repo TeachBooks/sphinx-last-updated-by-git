@@ -259,7 +259,6 @@ def _html_page_context(app, pagename, templatename, context, doctree):
     else:
         timestamp, show_sourcelink = data
     if not show_sourcelink:
-        del context['sourcename']
         del context['page_source_suffix']
     if timestamp is None:
         return
@@ -333,7 +332,7 @@ def setup(app):
     app.add_config_value(
         'git_untracked_check_dependencies', True, rebuild='env')
     app.add_config_value(
-        'git_untracked_show_sourcelink', False, rebuild='env')
+        'git_untracked_show_sourcelink', True, rebuild='env')
     app.add_config_value(
         'git_last_updated_timezone', None, rebuild='env')
     app.add_config_value(
