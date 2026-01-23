@@ -25,7 +25,7 @@ time6 = '2026-01-19 17:24:34'  # merge feature branch
 
 expected_results = {
     'index': [time1, 'defined'],
-    'I 🖤 Unicode': [time6, 'defined'],
+    'I 🖤 Unicode': [time4, 'defined'],
     'api': [time5, 'defined'],
     'example_module.example_function': [time5, 'undefined'],
     'search': ['None', 'undefined'],
@@ -186,8 +186,7 @@ def test_exclude_commits_warning(capsys):
     with pytest.raises(AssertionError):
         run_sphinx(
             'repo_full',
-            # TODO: remove 0a3b, merge commits should not be relevant here
-            git_exclude_commits='23d25d0b7ac4604b7a9545420b2f9de84daabe73,5ce13573d9ca44d35c18c5658fbe25e486a80b40,0a3b0953293759543a20fafc3105c35d0c597588')
+            git_exclude_commits='23d25d0b7ac4604b7a9545420b2f9de84daabe73,5ce13573d9ca44d35c18c5658fbe25e486a80b40')
     assert 'due to excluded commits' in capsys.readouterr().err
 
 
@@ -195,9 +194,18 @@ def test_exclude_commits_without_warning():
     data = run_sphinx(
         'repo_full',
         suppress_warnings='git.unhandled_files',
-        # TODO: remove 0a3b, see above
-        git_exclude_commits='23d25d0b7ac4604b7a9545420b2f9de84daabe73,5ce13573d9ca44d35c18c5658fbe25e486a80b40,0a3b0953293759543a20fafc3105c35d0c597588')
+        git_exclude_commits='23d25d0b7ac4604b7a9545420b2f9de84daabe73,5ce13573d9ca44d35c18c5658fbe25e486a80b40')
     assert data == {
         **expected_results,
         'I 🖤 Unicode': ['None', 'undefined'],
+    }
+
+def test_first_parent():
+    data = run_sphinx(
+        'repo_full',
+        git_last_updated_when_merged=1,
+    )
+    assert data == {
+        **expected_results,
+        'I 🖤 Unicode': [time6, 'defined'],
     }
