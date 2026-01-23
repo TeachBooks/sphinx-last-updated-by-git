@@ -103,14 +103,14 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
             break
         pieces = line1.rstrip().split(b'\0')
         # Git outputs 3 pieces for regular commits, but 4 for merge commits
-        # (with trailing NUL) when -m is not used. The 4th piece is empty.
+        # (with trailing NUL). The 4th piece is empty.
         assert len(pieces) in (3, 4), 'invalid git info in {}: {}'.format(
             git_dir, line1)
         timestamp, commit, parent_commits = pieces[:3]
         line2 = stream.readline().rstrip()
 
-        # Without -m, merge commits have no file list. If line2 doesn't end
-        # with NUL, it's the next commit header, not a file list.
+        # Since -m is not used, merge commits have no file list. If line2
+        # doesn't end with NUL, it's the next commit header, not a file list.
         if not line2.endswith(b'\0'):
             # Save it as the next header and skip this commit
             pending_header = line2
