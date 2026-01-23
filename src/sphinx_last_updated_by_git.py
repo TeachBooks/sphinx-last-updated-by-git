@@ -359,8 +359,6 @@ def setup(app):
         'git_exclude_commits', [], rebuild='env')
     app.add_config_value(
         'git_last_updated_when_merged', False, rebuild='env')
-    app.add_config_value(
-        'git_show_merge_commits', False, rebuild='env')
     return {
         'version': __version__,
         'parallel_read_safe': True,
