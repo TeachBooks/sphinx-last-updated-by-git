@@ -51,7 +51,7 @@ Options
       calculation by passing a list of commit hashes to the configuration
       option ``git_exclude_commits``.
 
-    * By default, merge commits are not shown as separate entries
+    * By default, merge commits are not taken into account
       when determining the last updated date.
       This ensures that the timestamp reflects when the file content was
       originally authored (the "change authored" date), not when a merge occurred.
