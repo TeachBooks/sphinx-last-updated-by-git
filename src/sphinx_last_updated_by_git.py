@@ -22,9 +22,7 @@ __version__ = '0.3.8'
 logger = getLogger(__name__)
 
 
-def update_file_dates(
-        git_dir, exclude_commits, file_dates, first_parent,
-        show_merge_commits):
+def update_file_dates(git_dir, exclude_commits, file_dates, last_updated_when_merged):
     """Ask Git for "author date" of given files in given directory.
 
     A git subprocess is executed at most three times:
@@ -59,9 +57,7 @@ def update_file_dates(
         '--author-date-order', '--relative', '--name-only',
         '--no-show-signature', '-z'
     ]
-    if show_merge_commits:
-        git_log_args.append('-m')
-    if first_parent:
+    if last_updated_when_merged:
         git_log_args.append('--first-parent')
     git_log_args.extend(['--', *requested_files])
 
@@ -180,8 +176,7 @@ def _env_updated(app, env):
         try:
             update_file_dates(
                 git_dir, exclude_commits, src_dates[git_dir],
-                first_parent=app.config.git_first_parent,
-                show_merge_commits=app.config.git_show_merge_commits)
+                last_updated_when_merged=app.config.git_last_updated_when_merged)
         except subprocess.CalledProcessError as e:
             msg = 'Error getting data from Git'
             msg += ' (no "last updated" dates will be shown'
@@ -239,8 +234,7 @@ def _env_updated(app, env):
         try:
             update_file_dates(
                 git_dir, exclude_commits, dep_dates[git_dir],
-                first_parent=app.config.git_first_parent,
-                show_merge_commits=app.config.git_show_merge_commits)
+                last_updated_when_merged=app.config.git_last_updated_when_merged)
         except subprocess.CalledProcessError as e:
             pass  # We ignore errors in dependencies
 
@@ -364,7 +358,7 @@ def setup(app):
     app.add_config_value(
         'git_exclude_commits', [], rebuild='env')
     app.add_config_value(
-        'git_first_parent', False, rebuild='env')
+        'git_last_updated_when_merged', False, rebuild='env')
     app.add_config_value(
         'git_show_merge_commits', False, rebuild='env')
     return {
