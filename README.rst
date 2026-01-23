@@ -51,12 +51,11 @@ Options
       calculation by passing a list of commit hashes to the configuration
       option ``git_exclude_commits``.
 
-    * By default, merge commits are not taken into account
-      when determining the last updated date.
-      This ensures that the timestamp reflects when the file content was
-      originally authored (the "change authored" date), not when a merge occurred.
+    * By default, the last updated date comes from the commit where the content
+      was authored, even if that was on a merged branch (timestamps of merge commits themselves are not taken into account).
       If instead you want to see the date of when that change was merged into
-      the current branch, set ``git_last_updated_when_merged = True`` in your ``conf.py``.
+      the current branch (following only the first-parent path), set
+      ``git_last_updated_when_merged = True`` in your ``conf.py``.
 
 Caveats
     * When using a "Git shallow clone" (with the ``--depth`` option),
