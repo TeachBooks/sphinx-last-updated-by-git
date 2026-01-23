@@ -213,8 +213,11 @@ def _env_updated(app, env):
         else:
             candi_dates[docname].append(date)
         for dep in env.dependencies[docname]:
-            # NB: dependencies are relative to srcdir and may contain ".."!
-            if excluded(dep):
+            # `dep` may be absolute or relative to srcdir and may contain ".."!
+            dep = Path(dep)
+            if dep.is_absolute():
+                dep = dep.relative_to(env.srcdir)
+            if excluded(str(dep)):
                 continue
             depfile = Path(env.srcdir, dep).resolve()
             if not depfile.exists():
