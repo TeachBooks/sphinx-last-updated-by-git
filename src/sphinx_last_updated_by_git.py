@@ -89,8 +89,8 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
     assert not line0.rstrip(), 'unexpected git output in {}: {}'.format(
         git_dir, line0)
 
-    pending_header = None
     while requested_files:
+        line1 = stream.readline()
         # Use pending_header if we read ahead in the previous iteration
         line1 = (
             pending_header if pending_header is not None
@@ -117,17 +117,12 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
         commit, parent_commits, author, timestamp = pieces
         line2 = stream.readline().rstrip()
 
-        # Without -m, merge commits have no file list. If line2 doesn't end
-        # with NUL, it's the next commit header, not a file list.
-        if not line2.endswith(b'\0'):
-            # Save it as the next header and skip this commit
-            pending_header = line2
-            continue
+        assert line2.endswith(b'\0'), 'unexpected file list in {}: {}'.format(
+            git_dir, line2)
 
         line2 = line2.rstrip(b'\0')
-        if not line2:
-            # Explicit empty file list: skip this commit
-            continue
+        assert line2, 'no changed files in {} (parent commit(s): {})'.format(
+            git_dir, parent_commits)
         changed_files = line2.split(b'\0')
 
         if commit in exclude_commits:
