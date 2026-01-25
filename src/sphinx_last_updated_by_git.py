@@ -22,7 +22,7 @@ __version__ = '0.3.8'
 logger = getLogger(__name__)
 
 
-def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
+def update_file_dates(git_dir, exclude_commits, file_dates, last_updated_when_merged):
     """Ask Git for "author date" of given files in given directory.
 
     A git subprocess is executed at most three times:
@@ -53,11 +53,11 @@ def update_file_dates(git_dir, exclude_commits, file_dates, first_parent):
     assert requested_files
 
     git_log_args = [
-        'git', 'log', '--pretty=format:%n%at%x00%H%x00%P',
+        'git', 'log', '--pretty=format:%n%H%x00%P%x00%at',
         '--author-date-order', '--relative', '--name-only',
-        '--no-show-signature', '-z', '-m'
+        '--no-show-signature', '-z'
     ]
-    if first_parent:
+    if last_updated_when_merged:
         git_log_args.append('--first-parent')
     git_log_args.extend(['--', *requested_files])
 
@@ -94,10 +94,14 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
                 msg.format(git_dir, requested_files, exclude_commits),
                 type='git', subtype='unhandled_files')
             break
-        pieces = line1.rstrip().split(b'\0')
+        line1_stripped = line1.rstrip()
+        if line1_stripped.endswith(b'\0'):
+            # No file list available for this (merge) commit.
+            continue
+        pieces = line1_stripped.split(b'\0')
         assert len(pieces) == 3, 'invalid git info in {}: {}'.format(
             git_dir, line1)
-        timestamp, commit, parent_commits = pieces
+        commit, parent_commits, timestamp = pieces
         line2 = stream.readline().rstrip()
         assert line2.endswith(b'\0'), 'unexpected file list in {}: {}'.format(
             git_dir, line2)
@@ -160,7 +164,7 @@ def _env_updated(app, env):
         try:
             update_file_dates(
                 git_dir, exclude_commits, src_dates[git_dir],
-                first_parent=app.config.git_first_parent)
+                last_updated_when_merged=app.config.git_last_updated_when_merged)
         except subprocess.CalledProcessError as e:
             msg = 'Error getting data from Git'
             msg += ' (no "last updated" dates will be shown'
@@ -192,8 +196,11 @@ def _env_updated(app, env):
         else:
             candi_dates[docname].append(date)
         for dep in env.dependencies[docname]:
-            # NB: dependencies are relative to srcdir and may contain ".."!
-            if excluded(dep):
+            # `dep` may be absolute or relative to srcdir and may contain ".."!
+            dep = Path(dep)
+            if dep.is_absolute():
+                dep = dep.relative_to(env.srcdir)
+            if excluded(str(dep)):
                 continue
             depfile = Path(env.srcdir, dep).resolve()
             if not depfile.exists():
@@ -215,7 +222,7 @@ def _env_updated(app, env):
         try:
             update_file_dates(
                 git_dir, exclude_commits, dep_dates[git_dir],
-                first_parent=app.config.git_first_parent)
+                last_updated_when_merged=app.config.git_last_updated_when_merged)
         except subprocess.CalledProcessError as e:
             pass  # We ignore errors in dependencies
 
@@ -341,7 +348,7 @@ def setup(app):
     app.add_config_value(
         'git_exclude_commits', [], rebuild='env')
     app.add_config_value(
-        'git_first_parent', True, rebuild='env')
+        'git_last_updated_when_merged', False, rebuild='env')
     return {
         'version': __version__,
         'parallel_read_safe': True,
