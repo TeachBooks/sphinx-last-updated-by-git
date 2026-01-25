@@ -91,13 +91,6 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
 
     while requested_files:
         line1 = stream.readline()
-        # Use pending_header if we read ahead in the previous iteration
-        line1 = (
-            pending_header if pending_header is not None
-            else stream.readline()
-        )
-        pending_header = None
-
         if not line1:
             msg = 'end of git log in {}, unhandled files: {}'
             assert exclude_commits, msg.format(
@@ -116,10 +109,8 @@ def parse_log(stream, requested_files, git_dir, exclude_commits, file_dates):
             git_dir, line1)
         commit, parent_commits, author, timestamp = pieces
         line2 = stream.readline().rstrip()
-
         assert line2.endswith(b'\0'), 'unexpected file list in {}: {}'.format(
             git_dir, line2)
-
         line2 = line2.rstrip(b'\0')
         assert line2, 'no changed files in {} (parent commit(s): {})'.format(
             git_dir, parent_commits)
