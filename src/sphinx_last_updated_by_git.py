@@ -57,7 +57,6 @@ def update_file_dates(git_dir, exclude_commits, file_dates, last_updated_when_me
     assert requested_files
 
     git_log_args = [
-        'git', 'log', '--pretty=format:%n%at%x00%H%x00%P%x00%aN',
         'git', 'log', '--pretty=format:%n%H%x00%P%x00%aN%x00%at',
         '--author-date-order', '--relative', '--name-only',
         '--no-show-signature', '-z'
