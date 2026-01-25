@@ -24,15 +24,18 @@ Usage
 
 Options
     * If a source file is not tracked by Git (e.g. because it has been
-      auto-generated on demand by autosummary_generate_) but its dependencies
+      auto-generated on demand by autosummary_generate_ or has not been committed to Git) but its dependencies
       are, the last_updated_ time is taken from them.  If you don't want this
       to happen, use ``git_untracked_check_dependencies = False``.
 
-    * If a source file is not tracked by Git, its HTML page doesn't get a
-      source link.  If you do want those pages to have a sourcelink, set
-      ``git_untracked_show_sourcelink = True``.  Of course, in this case
-      html_copy_source_ and html_show_sourcelink_ must also be ``True``, and
-      the theme you are using must support source links in the first place.
+    * If a source file is not tracked by Git (e.g. because it has been
+      auto-generated on demand by autosummary_generate_ or has not been committed to Git), 
+      by default its HTML page will not show a last updated timestamp.
+      Source links are still included if ``html_copy_source_`` and
+      ``html_show_sourcelink_`` are ``True`` (and
+      the theme you are using must support source links in the first place).
+      If you don't want this behavior, set ``git_untracked_show_sourcelink = False``.
+      In this case, its HTML page also doesn't get a source link.
 
     * By default, timestamps are displayed using the local time zone.
       You can specify a datetime.timezone_ object (or any ``tzinfo`` subclass
