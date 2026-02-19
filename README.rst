@@ -89,10 +89,12 @@ Options
         ]
 
       Excluded authors will not be displayed in the output. This is useful for
-      filtering out automated commits or bot accounts. Exclusion is applied after
-      alias resolution, so you can exclude by either the original username or
-      the mapped display name. If all authors for a file are excluded, the name
-      will not be shown in the "last updated" information.
+      filtering out automated commits or bot accounts. Note that the "last updated"
+      date is still taken from commits by excluded authors — only their names are
+      hidden.  Exclusion is applied after alias resolution, so you can exclude by
+      either the original username or the mapped display name. If all authors for
+      a file are excluded, the name will not be shown in the "last updated"
+      information, but the date will still be displayed.
 
     * Files can be excluded from the last updated date calculation by passing
       a list of exclusion patterns to the configuration option
