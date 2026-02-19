@@ -79,6 +79,21 @@ Options
       output is deduplicated. Aliases are matched after trimming whitespace,
       and if an exact key is not found, a lowercase key is also tried.
 
+    * Author exclusion: if you want to hide certain authors from the "last updated"
+      information, set ``git_author_exclude`` to a list of usernames or author
+      names in ``conf.py``, e.g.::
+
+        git_author_exclude = [
+          'dependabot',
+          'automated-bot',
+        ]
+
+      Excluded authors will not be displayed in the output. This is useful for
+      filtering out automated commits or bot accounts. Exclusion is applied after
+      alias resolution, so you can exclude by either the original username or
+      the mapped display name. If all authors for a file are excluded, the name
+      will not be shown in the "last updated" information.
+
     * Files can be excluded from the last updated date calculation by passing
       a list of exclusion patterns to the configuration option
       ``git_exclude_patterns``.

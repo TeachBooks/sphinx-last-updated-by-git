@@ -418,25 +418,45 @@ def _html_page_context(app, pagename, templatename, context, doctree):
     if author and (app.config.git_show_author or app.config.git_show_all_authors):
         # Apply optional author alias mapping (e.g., username -> real name)
         aliases = app.config.git_author_aliases or {}
+        exclude_list = app.config.git_author_exclude or []
+        # Normalize exclusion list for case-insensitive matching
+        exclude_set = {a.strip().lower() for a in exclude_list}
 
         def map_author(name: str) -> str:
             base = name.strip()
             return aliases.get(base) or aliases.get(base.lower()) or base
 
+        def should_exclude(name: str) -> bool:
+            mapped = map_author(name)
+            return mapped.lower() in exclude_set or name.strip().lower() in exclude_set
+
         # Handle both single author (string) and multiple authors (set)
         if isinstance(author, set):
             # Format multiple authors: "edited by Author1, Author2, and Author3"
-            authors_mapped = [map_author(a) for a in author]
+            # Filter out excluded authors
+            filtered_authors = [a for a in author if not should_exclude(a)]
+            authors_mapped = [map_author(a) for a in filtered_authors]
             # Deduplicate after mapping to avoid repeated names when aliases merge
             authors_list = sorted(set(authors_mapped))
 
-            if len(authors_list) == 1:
+            if len(authors_list) == 0:
+                # All authors were excluded, don't show author info
+                context['last_updated'] = date_str
+            elif len(authors_list) == 1:
                 author_names = authors_list[0]
+                author_str = translate('edited by %(author)s') % {
+                    'author': author_names
+                }
+                context['last_updated'] = date_str + ', ' + author_str
             elif len(authors_list) == 2:
                 author_names = translate('%(author1)s and %(author2)s') % {
                     'author1': authors_list[0],
                     'author2': authors_list[1]
                 }
+                author_str = translate('edited by %(author)s') % {
+                    'author': author_names
+                }
+                context['last_updated'] = date_str + ', ' + author_str
             else:
                 # Three or more authors: "Author1, Author2, and Author3"
                 all_but_last = ', '.join(authors_list[:-1])
@@ -445,15 +465,19 @@ def _html_page_context(app, pagename, templatename, context, doctree):
                     'authors': all_but_last,
                     'last_author': authors_list[-1]
                 }
-            # Use "edited by" for all authors list
-            author_str = translate('edited by %(author)s') % {
-                'author': author_names
-            }
-            context['last_updated'] = date_str + ', ' + author_str
+                # Use "edited by" for all authors list
+                author_str = translate('edited by %(author)s') % {
+                    'author': author_names
+                }
+                context['last_updated'] = date_str + ', ' + author_str
         else:
             # Single author (most recent): use "by" without comma
-            author_str = translate('by %(author)s') % {'author': map_author(author)}
-            context['last_updated'] = date_str + ' ' + author_str
+            if should_exclude(author):
+                # Author is excluded, don't show author info
+                context['last_updated'] = date_str
+            else:
+                author_str = translate('by %(author)s') % {'author': map_author(author)}
+                context['last_updated'] = date_str + ' ' + author_str
     else:
         context['last_updated'] = date_str
 
@@ -527,6 +551,8 @@ def setup(app):
         'git_show_all_authors', False, rebuild='env')
     app.add_config_value(
         'git_author_aliases', {}, rebuild='html')
+    app.add_config_value(
+        'git_author_exclude', [], rebuild='html')
     # Register this extension's message catalog for i18n of convenience strings
     try:
         locale_dir = str((Path(__file__).parent / 'locale').resolve())
